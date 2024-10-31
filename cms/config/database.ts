@@ -1,9 +1,67 @@
 import path from 'path';
 
-export default ({ env }: { env: any }) => {
-  const client = env('DATABASE_CLIENT', 'sqlite');
+// Define types for the environment function
+type EnvFunction = {
+  (key: string, defaultValue?: any): string;
+  int(key: string, defaultValue?: number): number;
+  bool(key: string, defaultValue?: boolean): boolean;
+};
 
-  const connections = {
+// Define SSL configuration type
+interface SSLConfiguration {
+  key?: string;
+  cert?: string;
+  ca?: string;
+  capath?: string;
+  cipher?: string;
+  rejectUnauthorized?: boolean;
+}
+
+// Define connection types
+interface BaseConnection {
+  connection: {
+    host?: string;
+    port?: number;
+    database?: string;
+    user?: string;
+    password?: string;
+    ssl?: false | SSLConfiguration;
+  };
+  pool?: {
+    min: number;
+    max: number;
+  };
+}
+
+interface MySQLConnection extends BaseConnection {
+  connection: BaseConnection['connection'];
+}
+
+interface PostgresConnection extends BaseConnection {
+  connection: BaseConnection['connection'] & {
+    connectionString?: string;
+    schema?: string;
+  };
+}
+
+interface SQLiteConnection {
+  connection: {
+    filename: string;
+  };
+  useNullAsDefault: boolean;
+}
+
+// Define the connections object type
+interface Connections {
+  mysql: MySQLConnection;
+  postgres: PostgresConnection;
+  sqlite: SQLiteConnection;
+}
+
+export default ({ env }: { env: EnvFunction }) => {
+  const client = env('DATABASE_CLIENT', 'sqlite') as keyof Connections;
+
+  const connections: Connections = {
     mysql: {
       connection: {
         host: env('DATABASE_HOST', 'localhost'),
